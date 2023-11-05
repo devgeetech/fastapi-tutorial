@@ -1,7 +1,7 @@
 from fastapi import status, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from .. import models, schemas, oath2
+from .. import models, oauth2, schemas
 from ..database import get_db
 from typing import List, Optional
 
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/posts", tags=["Posts"])
 @router.get("/", response_model=List[schemas.PostOut])
 async def get_posts(
     db: Session = Depends(get_db),
-    current_user: schemas.UserOut = Depends(oath2.get_current_user),
+    current_user: schemas.UserOut = Depends(oauth2.get_current_user),
     limit: Optional[int] = 10,
     skip: Optional[int] = 0,
     search: Optional[str] = "",
@@ -29,14 +29,21 @@ async def get_posts(
         .all()
     )
 
-    return posts_with_votes
+    result = []
+    for post, votes in posts_with_votes:
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+        post_data = schemas.PostOut(**post.__dict__, votes=votes, owner=current_user)
+        result.append(post_data)
+
+    return result
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
 async def create_posts(
     post: schemas.PostCreate,
     db: Session = Depends(get_db),
-    current_user: schemas.UserOut = Depends(oath2.get_current_user),
+    current_user: schemas.UserOut = Depends(oauth2.get_current_user),
 ):
     # cursor.execute(
     #     """ INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING * """,
@@ -55,7 +62,7 @@ async def create_posts(
 async def get_post(
     id: int,
     db: Session = Depends(get_db),
-    current_user: schemas.UserOut = Depends(oath2.get_current_user),
+    current_user: schemas.UserOut = Depends(oauth2.get_current_user),
 ):
     # cursor.execute("""SELECT * FROM posts WHERE id = %s """, (str(id),))
     # post = cursor.fetchone()
@@ -84,7 +91,7 @@ async def get_post(
 async def delete_post(
     id: int,
     db: Session = Depends(get_db),
-    current_user: schemas.UserOut = Depends(oath2.get_current_user),
+    current_user: schemas.UserOut = Depends(oauth2.get_current_user),
 ):
     # cursor.execute("""DELETE FROM posts WHERE id = %s RETURNING * """, (str(id),))
     # deleted_post = cursor.fetchone()
@@ -120,7 +127,7 @@ async def update_post(
     id: int,
     updated_post: schemas.PostUpdate,
     db: Session = Depends(get_db),
-    current_user: schemas.UserOut = Depends(oath2.get_current_user),
+    current_user: schemas.UserOut = Depends(oauth2.get_current_user),
 ):
     # cursor.execute(
     #     """ UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING * """,

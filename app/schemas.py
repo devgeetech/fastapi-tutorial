@@ -20,7 +20,7 @@ class UserOut(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PostCreate(PostBase):
@@ -39,7 +39,7 @@ class Post(PostBase):
 
     # To convert SQLAlchemy model to Pydantic model
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PostOut(PostBase):
@@ -51,7 +51,7 @@ class PostOut(PostBase):
 
     # To convert SQLAlchemy model to Pydantic model
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserLogin(BaseModel):
